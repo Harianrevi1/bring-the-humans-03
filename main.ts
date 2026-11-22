@@ -1,3 +1,7 @@
+// CONTRACT — main.ts copies VIDEO.json to the output directory, nothing more.
+// It never edits, re-encodes, or fetches anything; an invalid VIDEO.json
+// fails loudly here instead of shipping a broken entry to the grader.
+//
 // Entry program for the make.fun "Bring the humans with a TikTok ad" bounty
 // (bring-the-humans-03). Node 22, standard library only.
 //
@@ -27,9 +31,30 @@ try {
   process.exit(1);
 }
 
+// The entry is only valid if VIDEO.json names a real TikTok video URL.
+// Reject anything else now, before any output is written.
+let videoUrl: unknown;
+try {
+  videoUrl = JSON.parse(videoJson).url;
+} catch (err) {
+  console.error(`VIDEO.json is not valid JSON: ${(err as Error).message}`);
+  process.exit(1);
+}
+
+const tiktokVideoPattern = /^https:\/\/www\.tiktok\.com\/@[^/]+\/video\/\d+$/;
+if (typeof videoUrl !== 'string' || !tiktokVideoPattern.test(videoUrl)) {
+  console.error(
+    'VIDEO.json must contain a TikTok video URL like https://www.tiktok.com/@<handle>/video/<digits>; ' +
+      `got: ${typeof videoUrl === 'string' ? videoUrl : JSON.stringify(videoUrl) ?? 'missing'}`,
+  );
+  process.exit(1);
+}
+
 try {
   writeFileSync(join(outputDir, 'VIDEO.json'), videoJson);
 } catch (err) {
   console.error(`Could not write VIDEO.json to ${outputDir}: ${(err as Error).message}`);
   process.exit(1);
 }
+
+console.log('MAIN_OK');
